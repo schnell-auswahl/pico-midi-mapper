@@ -1,0 +1,38 @@
+#ifndef MIDI_HANDLER_H
+#define MIDI_HANDLER_H
+
+#include <Arduino.h>
+#include <MIDI.h>
+#include <Adafruit_TinyUSB.h>
+#include "config.h"
+#include "solenoid_driver.h"
+
+// USB MIDI Interface
+Adafruit_USBD_MIDI usb_midi;
+MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI_USB);
+
+// UART MIDI Interface (Serial1 auf GP0/GP1)
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI_UART);
+
+class MidiHandler {
+public:
+    MidiHandler(SolenoidDriver* driver);
+    
+    // Initialisierung
+    void begin();
+    
+    // Muss regelmäßig in loop() aufgerufen werden
+    void update();
+    
+    // MIDI-Callbacks
+    static void handleNoteOn(byte channel, byte note, byte velocity);
+    static void handleNoteOff(byte channel, byte note, byte velocity);
+    
+    // Hilfsfunktion: MIDI-Note zu Solenoid-Index
+    static int8_t noteToSolenoid(uint8_t note);
+
+private:
+    static SolenoidDriver* solenoidDriver;
+};
+
+#endif // MIDI_HANDLER_H

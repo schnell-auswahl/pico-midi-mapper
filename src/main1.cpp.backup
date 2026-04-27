@@ -1,0 +1,74 @@
+#include <Arduino.h>
+#include "config.h"
+#include "solenoid_driver.h"
+#include "midi_handler.h"
+
+// Globale Objekte
+SolenoidDriver solenoids;
+MidiHandler midi(&solenoids);
+
+// LED für Status (onboard LED)
+const int LED_PIN = 25;
+bool ledState = false;
+uint32_t lastLedBlink = 0;
+
+void setup() {
+    // Serielle Konsole für Debugging (USB Serial)
+    Serial.begin(115200);
+    
+    // Warte auf Serial-Verbindung (max 3 Sekunden)
+    uint32_t startTime = millis();
+    while (!Serial && (millis() - startTime < 3000)) {
+        delay(10);
+    }
+    
+    Serial.println("\n\n=================================");
+    Serial.println("  MIDI Solenoid Controller");
+    Serial.println("  Raspberry Pi Pico");
+    Serial.println("=================================");
+    Serial.println("Firmware Version: 1.0");
+    Serial.println("Solenoids: " + String(NUM_SOLENOIDS));
+    Serial.println("MIDI Channel: " + String(MIDI_CHANNEL));
+    Serial.println("---------------------------------\n");
+    
+    // Status-LED konfigurieren
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH);
+    
+    // Solenoid-Treiber initialisieren
+    solenoids.begin();
+    
+    // MIDI-Handler initialisieren
+    midi.begin();
+    
+    // Kurze Pause
+    delay(500);
+    
+    // Optional: Test-Sequenz ausführen
+    // Auskommentieren, wenn du beim Start alle Solenoids testen möchtest
+    // Serial.println("Starting test sequence in 2 seconds...");
+    // delay(2000);
+    // solenoids.testSequence();
+    
+    Serial.println("\nSystem ready! Waiting for MIDI input...\n");
+    digitalWrite(LED_PIN, LOW);
+}
+
+void loop() {
+    // MIDI-Nachrichten verarbeiten
+    midi.update();
+    
+    // Solenoid-Timer aktualisieren
+    solenoids.update();
+    
+    // Status-LED blinken lassen (1 Hz = System läuft)
+    if (millis() - lastLedBlink >= 500) {
+        ledState = !ledState;
+        digitalWrite(LED_PIN, ledState);
+        lastLedBlink = millis();
+    }
+    
+    // Kurze Pause um CPU zu entlasten
+    // Bei MIDI-Input sollte diese minimal sein
+    delay(1);
+}

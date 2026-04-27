@@ -1,0 +1,42 @@
+#include <Arduino.h>
+#include <Adafruit_TinyUSB.h>
+#include <MIDI.h>
+
+// USB MIDI Objekte erstellen (wie im Template)
+Adafruit_USBD_MIDI usbMidi;
+MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usbMidi, MIDI);
+
+void setup() {
+    pinMode(LED_BUILTIN, OUTPUT);
+    
+    // USB Gerät konfigurieren
+    TinyUSBDevice.setManufacturerDescriptor("Glockenspiel");
+    TinyUSBDevice.setProductDescriptor("Pico MIDI Solenoid");
+    
+    // USB MIDI starten
+    usbMidi.begin();
+    MIDI.begin();
+    
+    // 3x blinken = Ready
+    for(int i = 0; i < 3; i++) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(200);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(200);
+    }
+}
+
+void loop() {
+    // MIDI Nachrichten empfangen
+    MIDI.read();
+    
+    // LED an + Note On senden
+    digitalWrite(LED_BUILTIN, HIGH);
+    MIDI.sendNoteOn(60, 100, 1);  // Note C4, Velocity 100, Channel 1
+    delay(500);
+    
+    // LED aus + Note Off senden
+    digitalWrite(LED_BUILTIN, LOW);
+    MIDI.sendNoteOff(60, 0, 1);
+    delay(500);
+}

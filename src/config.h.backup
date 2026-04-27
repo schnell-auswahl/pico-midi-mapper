@@ -1,0 +1,39 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include <Arduino.h>
+
+// MIDI-Konfiguration
+#define MIDI_CHANNEL 10          // Standard: Channel 10 (Drums)
+#define UART_MIDI_BAUD 31250     // Standard MIDI Baudrate
+#define UART_MIDI_TX_PIN 0       // GP0 für UART TX
+#define UART_MIDI_RX_PIN 1       // GP1 für UART RX
+
+// Solenoid-Konfiguration
+#define NUM_SOLENOIDS 19
+#define SOLENOID_PULSE_MS 30     // Dauer des Solenoid-Impulses in Millisekunden
+#define MIN_VELOCITY 20          // Minimale MIDI-Velocity zum Auslösen
+
+// GPIO-Pin-Zuordnung für die 19 Solenoids (MOSFETs)
+// GP2-GP20 werden verwendet
+const uint8_t SOLENOID_PINS[NUM_SOLENOIDS] = {
+    2,  3,  4,  5,  6,   // Solenoids 0-4
+    7,  8,  9,  10, 11,  // Solenoids 5-9
+    12, 13, 14, 15, 16,  // Solenoids 10-14
+    17, 18, 19, 20       // Solenoids 15-18
+};
+
+// MIDI-Note zu Solenoid-Zuordnung
+// Standardmäßig chromatisch ab MIDI-Note 60 (mittleres C)
+const uint8_t MIDI_NOTE_MAP[NUM_SOLENOIDS] = {
+    60, 61, 62, 63, 64,  // C4 bis E4
+    65, 66, 67, 68, 69,  // F4 bis A4
+    70, 71, 72, 73, 74,  // Bb4 bis D5
+    75, 76, 77, 78       // Eb5 bis F#5
+};
+
+// PWM-Konfiguration für Velocity-Mapping (optional)
+#define USE_VELOCITY_MAPPING false  // true = PWM basierend auf Velocity
+#define PWM_FREQ 1000               // PWM Frequenz in Hz
+
+#endif // CONFIG_H

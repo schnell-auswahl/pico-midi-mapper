@@ -1,0 +1,93 @@
+#include "solenoid_driver.h"
+
+SolenoidDriver::SolenoidDriver() {
+    // Initialisiere alle States
+    for (int i = 0; i < NUM_SOLENOIDS; i++) {
+        states[i].active = false;
+        states[i].offTime = 0;
+    }
+}
+
+void SolenoidDriver::begin() {
+    // Konfiguriere alle Pins als Output und setze auf LOW
+    for (int i = 0; i < NUM_SOLENOIDS; i++) {
+        pinMode(SOLENOID_PINS[i], OUTPUT);
+        digitalWrite(SOLENOID_PINS[i], LOW);
+    }
+    
+    Serial.println("SolenoidDriver: Initialized " + String(NUM_SOLENOIDS) + " solenoids");
+}
+
+void SolenoidDriver::trigger(uint8_t solenoidIndex, uint8_t velocity) {
+    // Validierung
+    if (solenoidIndex >= NUM_SOLENOIDS) {
+        return;
+    }
+    
+    // Velocity-Filter
+    if (velocity < MIN_VELOCITY) {
+        return;
+    }
+    
+    uint8_t pin = SOLENOID_PINS[solenoidIndex];
+    
+    #if USE_VELOCITY_MAPPING
+        // PWM-basierte Ansteuerung für variable Stärke
+        uint8_t dutyCycle = velocityToDutyCycle(velocity);
+        analogWrite(pin, dutyCycle);
+    #else
+        // Einfaches On/Off (schneller und zuverlässiger für Solenoids)
+        digitalWrite(pin, HIGH);
+    #endif
+    
+    // Speichere den Zeitpunkt, zu dem der Solenoid deaktiviert werden soll
+    states[solenoidIndex].active = true;
+    states[solenoidIndex].offTime = millis() + SOLENOID_PULSE_MS;
+    
+    // Debug-Ausgabe
+    // Serial.println("Solenoid " + String(solenoidIndex) + " triggered (vel: " + String(velocity) + ")");
+}
+
+void SolenoidDriver::update() {
+    uint32_t now = millis();
+    
+    // Prüfe alle aktiven Solenoids
+    for (int i = 0; i < NUM_SOLENOIDS; i++) {
+        if (states[i].active && now >= states[i].offTime) {
+            // Zeit abgelaufen, Solenoid deaktivieren
+            digitalWrite(SOLENOID_PINS[i], LOW);
+            states[i].active = false;
+        }
+    }
+}
+
+void SolenoidDriver::allOff() {
+    for (int i = 0; i < NUM_SOLENOIDS; i++) {
+        digitalWrite(SOLENOID_PINS[i], LOW);
+        states[i].active = false;
+    }
+    Serial.println("SolenoidDriver: All solenoids OFF");
+}
+
+void SolenoidDriver::testSequence() {
+    Serial.println("SolenoidDriver: Starting test sequence...");
+    
+    // Jeder Solenoid für kurze Zeit aktivieren
+    for (int i = 0; i < NUM_SOLENOIDS; i++) {
+        Serial.println("Testing solenoid " + String(i) + " on pin " + String(SOLENOID_PINS[i]));
+        trigger(i, 100);
+        delay(200);  // Warte zwischen Tests
+    }
+    
+    Serial.println("SolenoidDriver: Test sequence complete");
+}
+
+uint8_t SolenoidDriver::velocityToDutyCycle(uint8_t velocity) {
+    // MIDI Velocity (0-127) auf PWM Duty Cycle (0-255) mappen
+    // Mit minimaler Schwelle für schwache Signale
+    if (velocity < MIN_VELOCITY) return 0;
+    
+    // Lineare Skalierung mit Minimum bei ~40% für schwächste Noten
+    uint16_t scaled = map(velocity, MIN_VELOCITY, 127, 100, 255);
+    return constrain(scaled, 0, 255);
+}
