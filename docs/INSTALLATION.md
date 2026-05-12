@@ -12,7 +12,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pico-midi-mapper.git
+git clone https://github.com/schnell-auswahl/pico-midi-mapper.git
 cd pico-midi-mapper
 ```
 
