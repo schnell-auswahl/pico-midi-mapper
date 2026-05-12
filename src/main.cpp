@@ -5,13 +5,13 @@
 #include <ArduinoJson.h>
 
 // ============================================================================
-// KONFIGURATION
+// CONFIGURATION
 // ============================================================================
 
-#define CONFIG_BUTTON_PIN 22  // Button zum Aktivieren des Config-Modus
-#define MAX_MAPPINGS 50       // Maximale Anzahl an Mappings
+#define CONFIG_BUTTON_PIN 22  // Button to activate config mode
+#define MAX_MAPPINGS 50       // Maximum number of mappings
 
-// Debug Print Macro (nur wenn DEBUG_MODE aktiv)
+// Debug Print Macro (only if DEBUG_MODE is active)
 #ifdef DEBUG_MODE
   #define DEBUG_PRINT(x) Serial.print(x)
   #define DEBUG_PRINTLN(x) Serial.println(x)
@@ -23,29 +23,39 @@
 #endif
 
 // ============================================================================
-// STRUKTUREN
+// DATA STRUCTURES
 // ============================================================================
 
 enum ActionType {
-    ACTION_PULSE,      // Kurzer Puls (z.B. Solenoid)
-    ACTION_TOGGLE,     // An/Aus wechseln
-    ACTION_PWM,        // PWM-Steuerung über Velocity/CC-Wert
-    ACTION_GATE        // An bei Note On, Aus bei Note Off
+    ACTION_PULSE,      // Short pulse (a="p")
+    ACTION_TOGGLE,     // Toggle (a="t") - Note On/Off
+    ACTION_PWM         // PWM control (a="w")
+};
+
+enum PWMMode {
+    PWM_VELOCITY,      // pm="v" - PWM via Velocity
+    PWM_CC,            // pm="c" - PWM via CC-Value
+    PWM_FIXED          // pm="f" - Fixed PWM value
 };
 
 struct MIDIMapping {
     bool active;
-    String type;           // "note_on", "note_off", "control_change"
-    byte channel;          // MIDI Kanal (1-16, 0 = alle)
-    byte note_or_cc;       // Note oder CC Nummer
-    byte pin;              // GPIO Pin
-    ActionType action;     // Was soll passiert
-    uint16_t duration;     // Pulse-Dauer in ms
-    bool toggle_state;     // Aktueller Toggle-Zustand
+    String type;           // "n" = Note, "c" = CC
+    byte channel;          // MIDI channel (1-16, 0 = all)
+    byte note_or_cc;       // Note or CC number
+    byte pin;              // GPIO pin
+    ActionType action;     // p, t, w
+    PWMMode pwm_mode;      // Only for ACTION_PWM: v, c, f
+    uint16_t duration;     // Pulse duration in ms
+    byte pwm_value;        // Fixed PWM value (PWM_FIXED only)
+    byte vel_min;          // Velocity filter min (0 = no filter)
+    byte vel_max;          // Velocity filter max (127 = no filter)
+    int8_t sustain;        // -1=don't care, 0=sustain off only, 1=sustain on only
+    bool toggle_state;     // Current toggle state
 };
 
 // ============================================================================
-// GLOBALE VARIABLEN
+// GLOBAL VARIABLES
 // ============================================================================
 
 MIDIMapping mappings[MAX_MAPPINGS];
@@ -55,15 +65,21 @@ int mappingCount = 0;
 Adafruit_USBD_MIDI usbMidi;
 Adafruit_USBD_MSC usb_msc;
 
-// MIDI Instanzen
+// MIDI instances
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usbMidi, MIDI_USB);
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI_HW);
 
-// Pulse-Timing
+// Pulse timing
 unsigned long pulseTimes[MAX_MAPPINGS];
 
+// Sustain pedal status (per channel: 0-15)
+bool sustainPedal[16] = {false};
+
+// CC values for PWM CC-mode (Channel 0-15, CC 0-127)
+byte ccValues[16][128] = {0};
+
 // ============================================================================
-// FORWARD DEKLARATIONEN
+// FORWARD DECLARATIONS
 // ============================================================================
 
 void startMIDIMode();
@@ -73,14 +89,14 @@ void startUSBStorageMode();
 // USB MASS STORAGE CALLBACKS
 // ============================================================================
 
-// RAMDisk für USB Mass Storage
-// Größe: 128 Blöcke à 512 Bytes = 64 KB
+// RAM disk for USB mass storage
+// Size: 128 blocks × 512 bytes = 64 KB
 #define DISK_BLOCK_NUM  128
 #define DISK_BLOCK_SIZE 512
 static uint8_t msc_disk[DISK_BLOCK_NUM][DISK_BLOCK_SIZE];
 
 int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize) {
-    // Lese Block aus RAMDisk
+    // Read block from RAM disk
     if (lba >= DISK_BLOCK_NUM) return -1;
     
     uint8_t* addr = msc_disk[lba];
@@ -90,7 +106,7 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize) {
 }
 
 int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize) {
-    // Schreibe Block in RAMDisk
+    // Write block to RAM disk
     if (lba >= DISK_BLOCK_NUM) return -1;
     
     uint8_t* addr = msc_disk[lba];
@@ -100,9 +116,9 @@ int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize) {
 }
 
 void msc_flush_cb() {
-    // Wird aufgerufen wenn Host "safely remove" macht
-    // Hier könnten wir Daten zurück zu LittleFS schreiben
-    DEBUG_PRINTLN("MSC Flush - Daten gespeichert");
+    // Called when host performs "safely remove"
+    // Here we could write data back to LittleFS
+    DEBUG_PRINTLN("MSC Flush - Data saved");
 }
 
 // ============================================================================
@@ -110,7 +126,7 @@ void msc_flush_cb() {
 // ============================================================================
 
 void createFAT12Image() {
-    // Minimales FAT12 Filesystem erstellen (64KB)
+    // Create minimal FAT12 filesystem (64KB)
     memset(msc_disk, 0, sizeof(msc_disk));
     
     // Boot Sector (Block 0)
@@ -173,7 +189,7 @@ void createFAT12Image() {
     
     // Fallback wenn keine Datei oder Fehler
     if (fileSize == 0) {
-        const char* fallback = "{\"device_name\":\"Glockenspiel\",\"version\":\"1.0\",\"mappings\":[]}";
+        const char* fallback = "{\"version\":1,\"maps\":[]}";
         fileSize = strlen(fallback);
         memcpy(msc_disk[4], fallback, fileSize);
     }
@@ -291,8 +307,8 @@ void loadConfig() {
         return;
     }
     
-    // Mappings einlesen
-    JsonArray maps = doc["mappings"];
+    // Mappings einlesen (neues kompaktes Format)
+    JsonArray maps = doc["maps"];
     mappingCount = 0;
     
     for (JsonObject map : maps) {
@@ -301,27 +317,51 @@ void loadConfig() {
         MIDIMapping &m = mappings[mappingCount];
         
         m.active = true;
-        m.type = map["type"].as<String>();
-        m.channel = map["channel"] | 0;
-        m.note_or_cc = map.containsKey("note") ? map["note"].as<byte>() : map["cc"].as<byte>();
-        m.pin = map["pin"];
-        m.duration = map["duration"] | 30;
+        m.type = map["t"].as<String>();  // "n" oder "c"
+        m.channel = map["ch"] | 0;
+        m.note_or_cc = map.containsKey("n") ? map["n"].as<byte>() : map["c"].as<byte>();
+        m.pin = map["p"];
+        m.duration = map["d"] | 30;
         m.toggle_state = false;
         
+        // Velocity Filter (default: 0-127 = alle)
+        m.vel_min = map["vmin"] | 0;
+        m.vel_max = map["vmax"] | 127;
+        
+        // Sustain (default: -1 = egal)
+        if (map.containsKey("s")) {
+            m.sustain = map["s"].as<int8_t>();
+        } else {
+            m.sustain = -1;
+        }
+        
         // Action Type parsen
-        String action = map["action"] | "pulse";
-        if (action == "pulse") m.action = ACTION_PULSE;
-        else if (action == "toggle") m.action = ACTION_TOGGLE;
-        else if (action == "pwm") m.action = ACTION_PWM;
-        else if (action == "gate") m.action = ACTION_GATE;
-        else m.action = ACTION_PULSE;
+        String action = map["a"] | "p";
+        if (action == "p") {
+            m.action = ACTION_PULSE;
+        } else if (action == "t") {
+            m.action = ACTION_TOGGLE;
+        } else if (action == "w") {
+            m.action = ACTION_PWM;
+            
+            // PWM Mode parsen
+            String pm = map["pm"] | "v";
+            if (pm == "v") m.pwm_mode = PWM_VELOCITY;
+            else if (pm == "c") m.pwm_mode = PWM_CC;
+            else if (pm == "f") {
+                m.pwm_mode = PWM_FIXED;
+                m.pwm_value = map["pv"] | 64;
+            }
+        } else {
+            m.action = ACTION_PULSE;
+        }
         
         // Pin konfigurieren
         pinMode(m.pin, OUTPUT);
         digitalWrite(m.pin, LOW);
         
-        DEBUG_PRINTF("Mapping %d: %s Note/CC=%d Pin=%d Action=%d\n", 
-                      mappingCount, m.type.c_str(), m.note_or_cc, m.pin, m.action);
+        DEBUG_PRINTF("Mapping %d: t=%s ch=%d n/cc=%d pin=%d a=%d\n", 
+                      mappingCount, m.type.c_str(), m.channel, m.note_or_cc, m.pin, m.action);
         
         mappingCount++;
     }
@@ -339,11 +379,21 @@ void handleNoteOn(byte channel, byte note, byte velocity) {
         MIDIMapping &m = mappings[i];
         
         if (!m.active) continue;
-        if (m.type != "note_on") continue;
+        if (m.type != "n") continue;  // Nur Note-Mappings
         if (m.channel != 0 && m.channel != channel) continue;
         if (m.note_or_cc != note) continue;
         
-        // Mapping gefunden!
+        // Velocity Filter
+        if (velocity < m.vel_min || velocity > m.vel_max) continue;
+        
+        // Sustain Check (UND-Bedingung)
+        if (m.sustain != -1) {
+            bool sustainPressed = sustainPedal[channel - 1];
+            if (m.sustain == 0 && sustainPressed) continue;  // Nur ohne Sustain
+            if (m.sustain == 1 && !sustainPressed) continue; // Nur mit Sustain
+        }
+        
+        // Mapping gefunden - Action ausführen
         switch (m.action) {
             case ACTION_PULSE:
                 digitalWrite(m.pin, HIGH);
@@ -351,16 +401,35 @@ void handleNoteOn(byte channel, byte note, byte velocity) {
                 break;
                 
             case ACTION_TOGGLE:
-                m.toggle_state = !m.toggle_state;
-                digitalWrite(m.pin, m.toggle_state ? HIGH : LOW);
-                break;
-                
-            case ACTION_GATE:
+                // Toggle: Note On schaltet ein
                 digitalWrite(m.pin, HIGH);
                 break;
                 
             case ACTION_PWM:
-                analogWrite(m.pin, map(velocity, 0, 127, 0, 255));
+                switch (m.pwm_mode) {
+                    case PWM_VELOCITY:
+                        // PWM via Velocity (0 = aus)
+                        if (velocity == 0) {
+                            analogWrite(m.pin, 0);
+                        } else {
+                            analogWrite(m.pin, map(velocity, 0, 127, 0, 255));
+                        }
+                        break;
+                        
+                    case PWM_CC:
+                        // PWM via gespeicherter CC-Wert
+                        {
+                            byte ccValue = ccValues[channel - 1][m.note_or_cc];
+                            analogWrite(m.pin, map(ccValue, 0, 127, 0, 255));
+                        }
+                        break;
+                        
+                    case PWM_FIXED:
+                        // Fester PWM-Wert für duration ms
+                        analogWrite(m.pin, map(m.pwm_value, 0, 127, 0, 255));
+                        pulseTimes[i] = millis();
+                        break;
+                }
                 break;
         }
     }
@@ -371,28 +440,62 @@ void handleNoteOff(byte channel, byte note, byte velocity) {
         MIDIMapping &m = mappings[i];
         
         if (!m.active) continue;
+        if (m.type != "n") continue;
         if (m.channel != 0 && m.channel != channel) continue;
         if (m.note_or_cc != note) continue;
         
-        // Gate-Mode: Bei Note Off ausschalten
-        if (m.action == ACTION_GATE) {
+        // Sustain Check
+        if (m.sustain != -1) {
+            bool sustainPressed = sustainPedal[channel - 1];
+            if (m.sustain == 0 && sustainPressed) continue;
+            if (m.sustain == 1 && !sustainPressed) continue;
+        }
+        
+        // Toggle-Mode: Bei Note Off ausschalten
+        if (m.action == ACTION_TOGGLE) {
             digitalWrite(m.pin, LOW);
+        }
+        
+        // PWM Velocity-Mode: Bei Note Off ausschalten
+        if (m.action == ACTION_PWM && m.pwm_mode == PWM_VELOCITY) {
+            analogWrite(m.pin, 0);
         }
     }
 }
 
 void handleControlChange(byte channel, byte cc, byte value) {
+    // Sustain Pedal (CC#64) tracken
+    if (cc == 64) {
+        sustainPedal[channel - 1] = (value >= 64);
+        DEBUG_PRINTF("Sustain CH%d: %s\n", channel, sustainPedal[channel - 1] ? "ON" : "OFF");
+    }
+    
+    // CC-Wert speichern für PWM CC-Mode
+    ccValues[channel - 1][cc] = value;
+    
+    // CC-Mappings durchsuchen
     for (int i = 0; i < mappingCount; i++) {
         MIDIMapping &m = mappings[i];
         
         if (!m.active) continue;
-        if (m.type != "control_change") continue;
+        if (m.type != "c") continue;  // Nur CC-Mappings
         if (m.channel != 0 && m.channel != channel) continue;
         if (m.note_or_cc != cc) continue;
         
-        // PWM mit CC-Wert
-        if (m.action == ACTION_PWM) {
-            analogWrite(m.pin, map(value, 0, 127, 0, 255));
+        // Sustain Check
+        if (m.sustain != -1) {
+            bool sustainPressed = sustainPedal[channel - 1];
+            if (m.sustain == 0 && sustainPressed) continue;
+            if (m.sustain == 1 && !sustainPressed) continue;
+        }
+        
+        // PWM mit CC-Wert (nur bei PWM CC-Mode)
+        if (m.action == ACTION_PWM && m.pwm_mode == PWM_CC) {
+            if (value == 0) {
+                analogWrite(m.pin, 0);
+            } else {
+                analogWrite(m.pin, map(value, 0, 127, 0, 255));
+            }
         }
     }
 }
@@ -622,13 +725,21 @@ void loop() {
     // Hardware MIDI verarbeiten
     MIDI_HW.read();
     
-    // Pulse-Timings prüfen (für ACTION_PULSE)
+    // Pulse-Timings prüfen (für ACTION_PULSE und PWM_FIXED)
     unsigned long now = millis();
     for (int i = 0; i < mappingCount; i++) {
-        if (mappings[i].action == ACTION_PULSE && pulseTimes[i] > 0) {
+        if (pulseTimes[i] > 0) {
             if (now - pulseTimes[i] >= mappings[i].duration) {
-                digitalWrite(mappings[i].pin, LOW);
-                pulseTimes[i] = 0;
+                // Pulse: Pin ausschalten
+                if (mappings[i].action == ACTION_PULSE) {
+                    digitalWrite(mappings[i].pin, LOW);
+                    pulseTimes[i] = 0;
+                }
+                // PWM Fixed: PWM ausschalten
+                else if (mappings[i].action == ACTION_PWM && mappings[i].pwm_mode == PWM_FIXED) {
+                    analogWrite(mappings[i].pin, 0);
+                    pulseTimes[i] = 0;
+                }
             }
         }
     }

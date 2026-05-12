@@ -1,58 +1,52 @@
 {
-  "device_name": "Glockenspiel MIDI Controller",
-  "version": "1.0",
-  "mappings": [
+  "version": 1,
+  "maps": [
     {
-      "comment": "Interne LED zum Testen",
-      "type": "note_on",
-      "channel": 1,
-      "note": 60,
-      "pin": 25,
-      "action": "pulse",
-      "duration": 100
+      "t": "n",
+      "ch": 1,
+      "n": 60,
+      "p": 25,
+      "a": "p",
+      "d": 100
     },
     {
-      "comment": "Solenoid 1 - Note C#",
-      "type": "note_on",
-      "channel": 1,
-      "note": 61,
-      "pin": 25,
-      "action": "pulse",
-      "duration": 30
+      "t": "n",
+      "ch": 1,
+      "n": 61,
+      "p": 25,
+      "a": "p",
+      "d": 30
     },
     {
-      "comment": "Solenoid 2 - Note D",
-      "type": "note_on",
-      "channel": 1,
-      "note": 62,
-      "pin": 25,
-      "action": "pulse",
-      "duration": 30
+      "t": "n",
+      "ch": 1,
+      "n": 62,
+      "p": 25,
+      "a": "p",
+      "d": 30
     },
     {
-      "comment": "Solenoid 3 - Note D#",
-      "type": "note_on",
-      "channel": 1,
-      "note": 63,
-      "pin": 4,
-      "action": "pulse",
-      "duration": 30
+      "t": "n",
+      "ch": 1,
+      "n": 63,
+      "p": 4,
+      "a": "p",
+      "d": 30
     },
     {
-      "comment": "Control Change - PWM auf Pin 10",
-      "type": "control_change",
-      "channel": 1,
-      "cc": 7,
-      "pin": 10,
-      "action": "pwm"
+      "t": "c",
+      "ch": 1,
+      "c": 7,
+      "p": 10,
+      "a": "w",
+      "pm": "c"
     },
     {
-      "comment": "Toggle-Mode - Pin dauerhaft an/aus",
-      "type": "note_on",
-      "channel": 1,
-      "note": 64,
-      "pin": 5,
-      "action": "toggle"
+      "t": "n",
+      "ch": 1,
+      "n": 64,
+      "p": 5,
+      "a": "t"
     }
   ]
 }

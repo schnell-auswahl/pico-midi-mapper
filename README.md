@@ -1,300 +1,250 @@
-# MIDI Solenoid Controller - Glockenspiel
+# Pico MIDI Mapper
 
-Raspberry Pi Pico basierter MIDI-Controller für 19 Solenoids (elektromagnetische Aktoren) zur Ansteuerung über MOSFETs.
+**A flexible, JSON-configurable MIDI-to-GPIO controller for Raspberry Pi Pico**
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
+[![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20Pico-red.svg)](https://www.raspberrypi.com/products/raspberry-pi-pico/)
 
-- ✅ **19 individuell ansteuerbare Solenoids**
-- ✅ **Dual MIDI Input**: USB MIDI und UART MIDI (5-Pin DIN)
-- ✅ **Velocity-Unterstützung** (optional mit PWM)
-- ✅ **Konfigurierbare MIDI-Note-Zuordnung**
-- ✅ **Automatische Impuls-Steuerung** (verhindert Überhitzung)
-- ✅ **Debug-Ausgabe** über USB Serial
-- ✅ **Test-Sequenz** für Hardware-Validierung
-
-## Hardware-Anforderungen
-
-### Komponenten
-
-- **1x Raspberry Pi Pico** (oder Pico W)
-- **19x N-Channel MOSFETs** (z.B. IRLZ44N, IRL540N oder ähnlich)
-  - Logic-Level MOSFETs (aktivierbar mit 3.3V)
-  - Min. 1A pro MOSFET (je nach Solenoid)
-- **19x Solenoids** (z.B. 12V Push-Pull Solenoids)
-- **19x Flyback-Dioden** (z.B. 1N4007 oder schneller: 1N5819 Schottky)
-- **19x Gate-Widerstände** (220Ω - 1kΩ)
-- **Externe Stromversorgung** für Solenoids (12V oder je nach Solenoid-Spezifikation)
-- *Optional:* **MIDI-Eingangsschaltung** mit 6N138 Optokoppler für UART MIDI
-
-### Pin-Belegung
-
-#### Solenoid-Ausgänge (GPIO → MOSFET Gates)
-```
-Solenoid  0: GP2     Solenoid 10: GP12
-Solenoid  1: GP3     Solenoid 11: GP13
-Solenoid  2: GP4     Solenoid 12: GP14
-Solenoid  3: GP5     Solenoid 13: GP15
-Solenoid  4: GP6     Solenoid 14: GP16
-Solenoid  5: GP7     Solenoid 15: GP17
-Solenoid  6: GP8     Solenoid 16: GP18
-Solenoid  7: GP9     Solenoid 17: GP19
-Solenoid  8: GP10    Solenoid 18: GP20
-Solenoid  9: GP11
-```
-
-#### MIDI-Eingänge
-```
-UART MIDI RX: GP1 (Serial1)
-UART MIDI TX: GP0 (Serial1, optional)
-USB MIDI:     Über USB-Verbindung
-```
-
-#### Status
-```
-LED (Onboard): GP25 (blinkt bei Betrieb)
-Debug Serial:  USB-Verbindung
-```
-
-## Verkabelung
-
-### MOSFET-Ansteuerung (pro Solenoid)
-
-```
-                     +12V (externe Versorgung)
-                       |
-                       |
-                    [Solenoid]
-                       |
-                       +-------|<|---+ (Flyback-Diode)
-                       |              |
-                       D              |
-                       |              |
-Pico GPx ---[220Ω]--- G   MOSFET     |
-                       |              |
-                       S              |
-                       |              |
-                      GND ----------GND (Pico GND)
-```
-
-**Wichtig:**
-1. **Gemeinsame Masse**: Pico GND MUSS mit der externen Versorgung GND verbunden sein
-2. **Flyback-Diode**: Kathode (Streifen) an +12V, Anode an Solenoid/Drain
-3. **Gate-Widerstand**: Schützt den GPIO-Pin
-4. **Externe Versorgung**: NICHT über Pico versorgen! Separate 12V Versorgung verwenden
-
-### UART MIDI Eingang (5-Pin DIN)
-
-```
-MIDI IN (5-Pin DIN):
-Pin 4 ----[220Ω]---- +3.3V (Pico)
-Pin 5 ----[220Ω]----+
-                    |
-                  [6N138]
-                    |
-                   GP1 (RX)
-```
-
-Für vollständige MIDI-Schaltung siehe: [MIDI Hardware Specification](https://www.midi.org/specifications)
-
-## Software-Installation
-
-### Voraussetzungen
-
-1. **PlatformIO** installieren (VS Code Extension oder CLI)
-2. **Git** (optional, zum Klonen)
-
-### Installation
-
-```bash
-# In VS Code:
-# 1. Projekt-Ordner öffnen
-# 2. PlatformIO installiert automatisch alle Abhängigkeiten
-
-# Oder per CLI:
-cd Glockenspiel
-pio lib install
-```
-
-### Kompilieren und Hochladen
-
-```bash
-# In VS Code:
-# Klicke auf "Upload" in der PlatformIO-Leiste
-
-# Oder per CLI:
-pio run -t upload
-```
-
-**Wichtig beim Upload:**
-- Halte den **BOOTSEL**-Button am Pico gedrückt
-- Verbinde den Pico per USB
-- Lasse den Button los → Pico erscheint als USB-Laufwerk
-- PlatformIO lädt automatisch hoch
-
-## Konfiguration
-
-Alle Einstellungen befinden sich in [`src/config.h`](src/config.h):
-
-### MIDI-Konfiguration
-
-```cpp
-#define MIDI_CHANNEL 10          // MIDI-Kanal (10 = Drums)
-#define MIN_VELOCITY 20          // Minimale Velocity zum Auslösen
-```
-
-### Solenoid-Timing
-
-```cpp
-#define SOLENOID_PULSE_MS 30     // Impulsdauer in Millisekunden
-```
-
-**Wichtig:** Zu lange Impulse können Solenoids überhitzen! Start mit 30ms, anpassen nach Bedbedarf.
-
-### MIDI-Note-Zuordnung
-
-Standardmäßig chromatisch ab C4 (MIDI-Note 60):
-
-```cpp
-const uint8_t MIDI_NOTE_MAP[NUM_SOLENOIDS] = {
-    60, 61, 62, 63, 64,  // C4 bis E4
-    65, 66, 67, 68, 69,  // F4 bis A4
-    70, 71, 72, 73, 74,  // Bb4 bis D5
-    75, 76, 77, 78       // Eb5 bis F#5
-};
-```
-
-**Anpassen für Glockenspiel-Tonleiter:**
-Ändere die Werte entsprechend deiner Glockenspiel-Stimmung.
-
-### Velocity-Mapping (optional)
-
-Für dynamische Lautstärke per PWM:
-
-```cpp
-#define USE_VELOCITY_MAPPING true  // PWM aktivieren
-#define PWM_FREQ 1000              // PWM-Frequenz
-```
-
-**Hinweis:** Viele Solenoids funktionieren besser mit einfachem On/Off (false).
-
-## Verwendung
-
-### 1. Verbindung herstellen
-
-**USB MIDI:**
-- Verbinde Pico per USB mit Computer
-- Sollte automatisch als "Pico MIDI" erkannt werden
-
-**UART MIDI:**
-- Verbinde 5-Pin DIN MIDI-Kabel mit MIDI-Eingangsschaltung
-
-### 2. MIDI senden
-
-Von deiner DAW oder MIDI-Controller:
-- **Kanal:** 10 (Standard, oder wie konfiguriert)
-- **Noten:** 60-78 (C4 bis F#5, oder wie gemappt)
-- **Velocity:** 20-127 (unter 20 wird ignoriert)
-
-### 3. Debugging
-
-Öffne Serial Monitor (115200 Baud):
-
-```bash
-# In VS Code: PlatformIO → Serial Monitor
-
-# Oder per CLI:
-pio device monitor
-```
-
-Du siehst:
-- System-Informationen beim Start
-- MIDI-Nachrichten
-- Solenoid-Triggering
-- Fehlerausgaben
-
-### 4. Test-Sequenz
-
-Aktiviere in [`src/main.cpp`](src/main.cpp):
-
-```cpp
-// In setup(), auskommentieren:
-solenoids.testSequence();
-```
-
-Alle Solenoids werden nacheinander getestet (200ms Pause).
-
-## Sicherheitshinweise
-
-⚠️ **WICHTIG:**
-
-1. **Überhitzung vermeiden:**
-   - Solenoids nicht dauerhaft aktivieren
-   - `SOLENOID_PULSE_MS` auf 20-50ms begrenzen
-   - Bei Überhitzung: Impulsdauer reduzieren oder Pause zwischen Triggern erhöhen
-
-2. **Stromversorgung:**
-   - Solenoids NIEMALS über Pico versorgen
-   - Separate 12V Versorgung mit ausreichend Ampere verwenden
-   - Gemeinsame Masse zwischen Pico und Versorgung
-
-3. **MOSFETs:**
-   - Logic-Level MOSFETs verwenden (3.3V-kompatibel)
-   - Flyback-Dioden NICHT vergessen
-   - Bei Überhitzung: Kühlkörper verwenden
-
-4. **Not-Aus:**
-   - `solenoids.allOff()` deaktiviert sofort alle Solenoids
-
-## Fehlerbehebung
-
-### Solenoid triggert nicht
-
-1. **Hardware prüfen:**
-   - MOSFET richtig angeschlossen?
-   - Flyback-Diode richtig gepolt?
-   - Externe Versorgung aktiv?
-   - Gemeinsame Masse verbunden?
-
-2. **Software prüfen:**
-   - Serial Monitor: Wird MIDI-Note empfangen?
-   - Ist Note in `MIDI_NOTE_MAP` enthalten?
-   - Velocity über `MIN_VELOCITY`?
-
-### USB MIDI wird nicht erkannt
-
-- Neustart des Pico (BOOTSEL + Reset)
-- USB-Kabel prüfen (Daten-fähig?)
-- Andere USB-Port probieren
-
-### UART MIDI funktioniert nicht
-
-- Optokoppler-Schaltung prüfen
-- Pin-Konfiguration in `config.h` prüfen
-- MIDI-Kabel richtig angeschlossen (nicht vertauscht)?
-
-## Projekt-Struktur
-
-```
-Glockenspiel/
-├── platformio.ini          # PlatformIO Konfiguration
-├── src/
-│   ├── main.cpp            # Hauptprogramm
-│   ├── config.h            # Alle Einstellungen
-│   ├── solenoid_driver.h   # Solenoid-Treiber Header
-│   ├── solenoid_driver.cpp # Solenoid-Treiber Implementation
-│   ├── midi_handler.h      # MIDI-Handler Header
-│   └── midi_handler.cpp    # MIDI-Handler Implementation
-└── README.md               # Diese Datei
-```
-
-## Lizenz
-
-Open Source - nutze und modifiziere nach Belieben!
-
-## Credits
-
-Projekt für MIDI-gesteuertes Glockenspiel mit Raspberry Pi Pico.
+Transform your Raspberry Pi Pico into a universal MIDI-controlled I/O interface. Control solenoids, LEDs, motors, relays, or any GPIO-compatible device using MIDI messages with an easy-to-configure JSON mapping system.
 
 ---
 
-**Viel Erfolg beim Bauen! 🎵🔧**
+## 🚀 Key Feature: Drag & Drop Configuration
+
+**No recompilation needed!** After the initial firmware flash:
+
+1. **Hold the CONFIG button** (GPIO 22 to GND) while connecting USB
+2. Your Pico appears as a **USB mass storage device** 
+3. **Drag & drop** your `config.json` directly onto the drive
+4. **Or edit the file** with any text editor right on the drive
+5. Disconnect and reconnect - **done!** ✨
+
+Perfect for:
+- 🎵 Quick tweaks during live performances
+- 🔧 Testing different MIDI mappings without code changes
+- 👥 Non-programmers who want to customize behavior
+- 🎹 Multiple configurations for different projects
+
+---
+
+## ✨ Features
+
+- **🎹 Dual MIDI Input**: USB MIDI + UART MIDI (5-pin DIN) simultaneously
+- **📍 Flexible GPIO Mapping**: Map any MIDI note or CC to any GPIO pin
+- **⚡ Multiple Action Types**:
+  - **Pulse** - Timed trigger (perfect for solenoids)
+  - **Toggle** - On/Off switching (LEDs, relays)
+  - **PWM** - Analog control via velocity or CC values
+- **🎚️ Advanced Filtering**: Velocity ranges, sustain pedal support
+- **🌐 Web-Based Editor**: Visual configuration tool at [elektrologue.com/midi-mapper-editor.html](https://elektrologue.com/midi-mapper-editor.html)
+- **💾 Easy Updates**: USB mass storage mode for configuration changes
+- **🔧 Up to 50 mappings**: Control multiple outputs independently
+
+---
+
+## 🎯 Use Cases
+
+<table>
+<tr>
+<td width="33%">
+
+### 🎺 Solenoid Instruments
+Build MIDI-controlled acoustic instruments like glockenspiels, chimes, or percussion robots
+
+</td>
+<td width="33%">
+
+### 💡 LED Control
+Drive LED strips, matrices, or individual LEDs with velocity-sensitive brightness
+
+</td>
+<td width="33%">
+
+### 🔌 Automation
+Control relays, motors, pneumatic valves, or other actuators via MIDI
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🎹 Quick Start with the Web Editor
+
+### 1. Create Your Configuration
+
+Visit the **[MIDI Mapper Editor](https://elektrologue.com/midi-mapper-editor.html)** in your browser:
+
+1. **Add mappings** using the intuitive interface
+2. Set MIDI channel, note/CC number
+3. Assign GPIO pins and actions
+4. Configure pulse durations, PWM modes, velocity filters
+5. **Export** your `config.json` file
+
+![MIDI Mapper Editor](docs/images/midi-mapper-editor.png)
+*Visual configuration - no coding required!*
+
+### 2. Flash the Firmware (One Time)
+
+```bash
+# Clone this repository
+git clone https://github.com/YOUR_USERNAME/pico-midi-mapper.git
+cd pico-midi-mapper
+
+# Build and upload (PlatformIO required)
+pio run --target upload
+pio run --target uploadfs
+```
+
+### 3. Upload Your Configuration
+
+**Method A: Hardware Button**
+1. Connect GPIO 22 to GND (or hold CONFIG button)
+2. Connect USB cable
+3. Pico appears as a USB drive
+4. Drag your `config.json` onto the drive
+5. Disconnect and reconnect without button
+
+**Method B: MIDI SysEx** (no hardware button needed)
+1. Send SysEx command: `F0 7D 47 43 01 F7`
+2. Pico reboots as USB drive
+3. Edit or replace `config.json`
+4. Disconnect and reconnect
+
+---
+
+## 📖 Example: Solenoid Glockenspiel
+
+```json
+{
+  "version": 1,
+  "maps": [
+    {
+      "t": "n",       // Type: Note
+      "ch": 1,        // MIDI Channel 1
+      "n": 60,        // Note 60 (Middle C)
+      "p": 2,         // GPIO Pin 2
+      "a": "p",       // Action: Pulse
+      "d": 30         // Duration: 30ms
+    },
+    {
+      "t": "n",
+      "ch": 1,
+      "n": 62,        // Note 62 (D)
+      "p": 3,
+      "a": "p",
+      "d": 30
+    }
+  ]
+}
+```
+
+[→ See more examples](examples/)
+
+---
+
+## 🛠️ Hardware Setup
+
+### Minimal Setup (Testing)
+- Raspberry Pi Pico
+- USB cable
+- That's it! Test with the onboard LED (GPIO 25)
+
+### Full Setup (Solenoids/Actuators)
+- Raspberry Pi Pico
+- N-Channel MOSFETs (logic-level: IRLZ44N, IRL540N)
+- Flyback diodes (1N5819 Schottky recommended)
+- Gate resistors (220Ω - 1kΩ)
+- External power supply (12V for solenoids)
+- Optional: MIDI input circuit (6N138 optocoupler)
+
+[→ Detailed wiring guide](docs/WIRING_DETAILS.md) | [→ Bill of materials](docs/BILL_OF_MATERIALS.md)
+
+---
+
+## 📚 Documentation
+
+- **[Installation Guide](docs/INSTALLATION.md)** - First-time setup
+- **[Configuration Format](docs/CONFIGURATION_FORMAT.md)** - JSON structure reference
+- **[Hardware Setup](docs/HARDWARE_SETUP.md)** - Component selection & assembly
+- **[Wiring Details](docs/WIRING_DETAILS.md)** - Circuit diagrams
+- **[MIDI Features](docs/MIDI_FEATURES.md)** - Advanced MIDI control
+- **[USB Mass Storage](docs/USB_MASS_STORAGE.md)** - Technical details
+
+---
+
+## 🔧 Configuration Reference
+
+### Action Types
+
+| Action | Code | Description | Required Fields |
+|--------|------|-------------|----------------|
+| **Pulse** | `"p"` | Brief trigger (e.g., solenoid strike) | `d` (duration) |
+| **Toggle** | `"t"` | On/Off state (LED, relay) | - |
+| **PWM** | `"w"` | Analog control (brightness, speed) | `pm` (PWM mode) |
+
+### PWM Modes
+
+| Mode | Code | Description |
+|------|------|-------------|
+| **Velocity** | `"v"` | Use MIDI velocity (0-127) as PWM value |
+| **CC Value** | `"c"` | Use Control Change value for PWM |
+| **Fixed** | `"f"` | Fixed PWM value with timed pulse |
+
+[→ Complete configuration reference](docs/CONFIGURATION_FORMAT.md)
+
+---
+
+## 💡 Example Projects
+
+### 🎼 Solenoid Glockenspiel
+19-note electro-acoustic instrument
+- [Configuration](examples/solenoid-glockenspiel/)
+- MIDI channel 1, notes 60-78
+- 30ms pulse duration
+
+### 💡 LED Matrix
+RGB LED control with velocity
+- [Configuration](examples/led-control/)
+- PWM brightness via velocity
+- Multi-channel support
+
+### 🔌 Relay Board
+8-channel home automation
+- [Configuration](examples/relay-board/)
+- Toggle mode for relays
+- Sustain pedal support
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- Built with [PlatformIO](https://platformio.org/)
+- Uses [Adafruit TinyUSB Library](https://github.com/adafruit/Adafruit_TinyUSB_Arduino)
+- Uses [Arduino MIDI Library](https://github.com/FortySevenEffects/arduino_midi_library)
+- Inspired by the maker and MIDI hacking community
+
+---
+
+## 🔗 Links
+
+- **Web Configuration Tool**: [elektrologue.com/midi-mapper-editor.html](https://elektrologue.com/midi-mapper-editor.html)
+- **Report Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/pico-midi-mapper/issues)
+- **Raspberry Pi Pico**: [Official Documentation](https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html)
+
+---
+
+**Made with ❤️ for the MIDI and maker community**
