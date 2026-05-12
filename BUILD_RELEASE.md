@@ -420,9 +420,16 @@ ls -lh pico-midi-mapper-v1.0.0.uf2     # Prüfen
 git tag -a v1.0.0 -m "Release 1.0.0"
 git push origin v1.0.0
 
-# 5. GitHub Release manuell erstellen
+# 5a. GitHub Release manuell erstellen
 # → https://github.com/USERNAME/pico-midi-mapper/releases/new
 # → UF2 hochladen, Release Notes schreiben, Publish
+
+# 5b:
+gh release create v1.0.0 \
+  pico-midi-mapper-v1.0.0.uf2 \
+  --title "v1.0.0 - Initial Release" \
+  --notes "See README.md for details"
+
 ```
 
 ### Versions-Update für nächsten Release

@@ -3,6 +3,7 @@
 **A flexible, JSON-configurable MIDI-to-GPIO controller for Raspberry Pi Pico**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/schnell-auswahl/pico-midi-mapper?label=Latest%20Release)](https://github.com/schnell-auswahl/pico-midi-mapper/releases/latest)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
 [![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20Pico-red.svg)](https://www.raspberrypi.com/products/raspberry-pi-pico/)
 
@@ -35,15 +36,26 @@ Transform your Raspberry Pi Pico into a universal MIDI-controlled I/O interface.
 
 ---
 
-## 🚀 Drag & Drop Installation
+## 🚀 Quick Installation (3 Steps, No Coding!)
 
-**After creating your config in the web editor:**
+**Get started in minutes - no PlatformIO or programming required:**
 
-1. **Flash firmware once** (see Quick Start below)
-2. **Hold CONFIG button** (GPIO 22 to GND) while connecting USB
-3. Pico appears as a **USB drive**
-4. **Drag your `config.json`** from the web editor onto the drive
-5. Disconnect and reconnect - **your mappings are active!** ✨
+### 1️⃣ Download Firmware
+- Go to **[Latest Release](https://github.com/schnell-auswahl/pico-midi-mapper/releases/latest)**
+- Download `pico-midi-mapper-vX.X.X.uf2`
+
+### 2️⃣ Flash Your Pico (One Time)
+- **Hold BOOTSEL button** on Pico while connecting USB
+- Pico appears as **RPI-RP2** USB drive
+- **Drag the `.uf2` file** onto the drive
+- Pico automatically reboots - **firmware installed!** ✅
+
+### 3️⃣ Upload Your Config (Anytime)
+- Create config in **[Web Editor](https://elektrologue.com/midi-mapper-editor.html)**
+- **Hold CONFIG button** (GPIO 22 to GND) while connecting USB
+- Pico appears as **PICO FS** USB drive
+- **Drag `config.json`** onto the drive
+- Disconnect and reconnect - **ready to play!** 🎉
 
 **No recompilation. No command line. No IDE required.**
 
@@ -98,51 +110,106 @@ Control relays, motors, pneumatic valves, or other actuators via MIDI
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Step-by-Step)
 
-### Step 1: Design Your Mappings (Web Editor)
+### Step 1: Download Firmware
 
-**Use the visual editor** - the recommended and easiest way:
+**Get the latest pre-compiled firmware:**
 
-1. Open **[MIDI Mapper Editor](https://elektrologue.com/midi-mapper-editor.html)**
-2. Add MIDI input nodes (Note or CC)
-3. Add GPIO output nodes (Pulse, Toggle, or PWM)
-4. Connect them visually
-5. Configure settings (duration, velocity range, etc.)
-6. **Export** → Download `config.json`
+1. Go to **[GitHub Releases](https://github.com/schnell-auswahl/pico-midi-mapper/releases/latest)**
+2. Download `pico-midi-mapper-vX.X.X.uf2` (typically 200-500 KB)
+3. Save to your computer
 
-**Alternative:** Manually write JSON (see [Configuration Format](docs/CONFIGURATION_FORMAT.md))
+### Step 2: Flash Firmware to Pico
 
-### Step 2: Flash Firmware (One Time Only)
+**Using BOOTSEL mode (works on all computers, no drivers needed):**
+
+1. **Disconnect** your Pico from USB
+2. **Hold down the BOOTSEL button** on your Pico
+3. **While holding BOOTSEL**, connect USB cable to computer
+4. **Release BOOTSEL** - Pico appears as **RPI-RP2** USB drive
+5. **Drag and drop** the `.uf2` file onto the RPI-RP2 drive
+6. **Pico automatically reboots** and starts running the firmware ✅
+
+**Note:** You only need to flash firmware once. Config updates use a different method (see Step 4).
+
+[→ Detailed installation guide](docs/INSTALLATION.md) | [→ Troubleshooting](docs/INSTALLATION.md#troubleshooting)
+
+### Step 3: Create Your MIDI Mappings
+
+**Use the visual web editor** (recommended):
+
+1. Open **[MIDI Mapper Editor](https://elektrologue.com/midi-mapper-editor.html)** in your browser
+2. **Add nodes:**
+   - MIDI inputs (Note or Control Change)
+   - GPIO outputs (Pulse, Toggle, or PWM)
+3. **Connect** nodes by dragging between ports
+4. **Configure** each node (pin numbers, durations, velocity ranges)
+5. **Export** → Download your `config.json` file
+
+**Alternative:** Manually write JSON - see [Configuration Format](docs/CONFIGURATION_FORMAT.md)
+
+### Step 4: Upload Configuration to Pico
+
+**Using USB Mass Storage mode (no re-flashing needed!):**
+
+1. **Disconnect** your Pico from USB
+2. **Connect GPIO 22 to GND** (or press CONFIG button if you installed one)
+   ```
+   GPIO 22 ──┤ ├── GND    (or use a button)
+   ```
+3. **While GPIO 22 is grounded**, connect USB cable
+4. Pico appears as **PICO FS** USB drive (LED blinks slowly)
+5. **Drag your `config.json`** onto the PICO FS drive
+6. **Eject safely** and disconnect USB
+7. **Reconnect normally** (without GPIO 22 grounded)
+8. **Your mappings are now active!** 🎉
+
+**Alternative (no GPIO access):** Send MIDI SysEx command `F0 7D 47 43 01 F7` to enter config mode
+
+[→ USB Mass Storage details](docs/USB_MASS_STORAGE.md)
+
+### Step 5: Connect MIDI & Test!
+
+**Connect your MIDI source:**
+- **USB MIDI**: Plug MIDI controller or DAW into Pico's USB port
+- **Hardware MIDI**: Connect 5-pin DIN to GPIO 1 (RX) - [see wiring](docs/HARDWARE_SETUP.md)
+
+**Test your mappings:**
+- Play notes or send CC messages from your MIDI controller
+- GPIO pins should trigger according to your config
+- Onboard LED (GPIO 25) can be used for testing without external hardware
+
+**You're ready to go!** 🎹
+
+---
+
+## 👨‍💻 Advanced: Build from Source
+
+**For developers who want to modify the firmware:**
 
 ```bash
+# Install PlatformIO first (if not already installed)
+# https://platformio.org/install
+
 # Clone this repository
 git clone https://github.com/schnell-auswahl/pico-midi-mapper.git
 cd pico-midi-mapper
 
-# Build and upload (PlatformIO required)
+# Build firmware
+pio run
+
+# Flash to Pico (via BOOTSEL or picotool)
 pio run --target upload
-pio run --target uploadfs
 ```
 
-[→ Detailed installation guide](docs/INSTALLATION.md)
+**Build your own release:**
+```bash
+pio run
+cp .pio/build/pico/firmware.uf2 my-custom-firmware.uf2
+```
 
-### Step 3: Upload Your Configuration
-
-**Easy drag-and-drop:**
-
-1. **Hold CONFIG button** (GPIO 22 to GND) while connecting USB
-2. Pico appears as **USB drive**
-3. **Drag `config.json`** from web editor onto drive  
-4. **Eject safely** and reconnect
-
-**Alternative (no button):** Send MIDI SysEx `F0 7D 47 43 01 F7`
-
-[→ USB mass storage details](docs/USB_MASS_STORAGE.md)
-
-### Step 4: Play!
-
-Connect your MIDI controller or DAW and start triggering your outputs! 🎉
+[→ See BUILD_RELEASE.md](BUILD_RELEASE.md) for creating GitHub releases
 
 ---
 
@@ -354,7 +421,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - **Web Configuration Tool**: [elektrologue.com/midi-mapper-editor.html](https://elektrologue.com/midi-mapper-editor.html)
-- **Report Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/pico-midi-mapper/issues)
+- **Report Issues**: [GitHub Issues](https://github.com/schnell-auswahl/pico-midi-mapper/issues)
 - **Raspberry Pi Pico**: [Official Documentation](https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html)
 
 ---
