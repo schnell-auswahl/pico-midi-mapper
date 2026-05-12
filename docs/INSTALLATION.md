@@ -226,7 +226,7 @@ MIDI Note Off: Ch=1 Note=60
 1. Send SysEx `F0 7D 47 43 01 F7` or use button
 2. LED should blink 10 times (SysEx) or 1Hz (button)
 3. USB drive should appear
-4. File `config.json` should be visible
+4. File `config.jso` should be visible. (If your computer struggles with that shortened json extension, simply rename to .json to edit and back to .jso to upload)
 
 ## Troubleshooting
 
