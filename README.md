@@ -20,6 +20,8 @@ Transform your Raspberry Pi Pico into a universal MIDI-controlled I/O interface.
 
 [![MIDI Mapper Editor](https://img.shields.io/badge/🎹_MIDI_Mapper_Editor-Launch_Tool-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMThjLTQuNDEgMC04LTMuNTktOC04czMuNTktOCA4LTggOCAzLjU5IDggOC0zLjU5IDgtOCA4em0tMS01aDJ2Mmgtdi0yem0wLThoMnY2aC0yVjd6Ii8+PC9zdmc+)](https://elektrologue.com/midi-mapper-editor.html)
 
+[![MIDI Mapper Editor Screenshot](docs/images/midi-mapper-editor.png)](https://elektrologue.com/midi-mapper-editor.html)
+
 *Visual node-based editor - design your MIDI-to-GPIO mappings in minutes, no coding required!*
 
 **Why use the web editor?**
