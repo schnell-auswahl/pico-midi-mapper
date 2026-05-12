@@ -15,21 +15,21 @@ Transform your Raspberry Pi Pico into a universal MIDI-controlled I/O interface.
 **Create your MIDI mappings with the drag-and-drop editor** - the recommended way to configure your Pico MIDI Mapper:
 
 <div align="center">
-  
-**[🌐 Open MIDI Mapper Editor](https://elektrologue.com/midi-mapper-editor.html)**
 
-<iframe src="https://elektrologue.com/embed.html?config=Litegraph%2Fconfigs%2FUserConfigs%2F2026_05_12_11_37_14_0750.json&zoom=0.9&lgtype=MIDI_Mapping&lang=de" width="100%" height="500" frameborder="0" style="max-width: 1200px; border: 1px solid #ddd; border-radius: 8px;"></iframe>
+### **[🌐 Open MIDI Mapper Editor →](https://elektrologue.com/midi-mapper-editor.html)**
 
-*Visual node-based editor - design your MIDI-to-GPIO mappings in minutes!*
+[![MIDI Mapper Editor](https://img.shields.io/badge/🎹_MIDI_Mapper_Editor-Launch_Tool-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMThjLTQuNDEgMC04LTMuNTktOC04czMuNTktOCA4LTggOCAzLjU5IDggOC0zLjU5IDgtOCA4em0tMS01aDJ2Mmgtdi0yem0wLThoMnY2aC0yVjd6Ii8+PC9zdmc+)](https://elektrologue.com/midi-mapper-editor.html)
 
-</div>
+*Visual node-based editor - design your MIDI-to-GPIO mappings in minutes, no coding required!*
 
 **Why use the web editor?**
-- ✅ **Visual workflow** - see your signal routing
-- ✅ **Real-time validation** - catch errors before uploading
+- ✅ **Visual workflow** - see your signal routing in real-time
+- ✅ **Validation** - catch configuration errors before uploading
 - ✅ **No coding** - just drag, connect, and configure
-- ✅ **Built-in documentation** - tooltips for every setting
+- ✅ **Built-in docs** - tooltips for every setting
 - ✅ **Export ready** - downloads perfect `config.json` files
+
+</div>
 
 ---
 
