@@ -26,5 +26,7 @@ Thumbs.db
 *.log
 *.code-workspace
 
-# Explanations
+# Developer documentation (personal notes)
 BUILD_RELEASE.md
+
+/BUILD_RELEASE.md
