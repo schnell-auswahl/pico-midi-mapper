@@ -2,10 +2,7 @@
 
 **A flexible, JSON-configurable MIDI-to-GPIO controller for Raspberry Pi Pico**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/v/release/schnell-auswahl/pico-midi-mapper?label=Latest%20Release)](https://github.com/schnell-auswahl/pico-midi-mapper/releases/latest)
-[![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
-[![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20Pico-red.svg)](https://www.raspberrypi.com/products/raspberry-pi-pico/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GitHub release](https://img.shields.io/github/v/release/schnell-auswahl/pico-midi-mapper?label=Latest%20Release)](https://github.com/schnell-auswahl/pico-midi-mapper/releases/latest) [![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/) [![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20Pico-red.svg)](https://www.raspberrypi.com/products/raspberry-pi-pico/)
 
 Transform your Raspberry Pi Pico into a universal MIDI-controlled I/O interface. Control solenoids, LEDs, motors, relays, or any GPIO-compatible device using MIDI messages - **all configured visually in your browser, no coding required!**
 
@@ -114,9 +111,6 @@ pio run --target upload
 pio run
 cp .pio/build/pico/firmware.uf2 my-custom-firmware.uf2
 ```
-
-See [BUILD_RELEASE.md](BUILD_RELEASE.md) for creating GitHub releases.
-
 ---
 
 ## Use Cases
