@@ -49,6 +49,8 @@ You only need to flash firmware once. Config updates use a different method (see
 
 **Option A: Web Editor (Recommended)**
 
+![MIDI Mapper Editor Screenshot](docs/images/midi-mapper-editor.png)
+
 Open the [MIDI Mapper Editor](https://elektrologue.com/midi-mapper-editor.html) in your browser:
 
 1. Add MIDI input nodes (Note or Control Change)
